@@ -2,10 +2,11 @@
 Automatically decomment code, for use cases including minimization, removal of PII, and cleanup.
 
 #### Supported Languages:
-[ ] Python (in-progress)
-[ ] JS
-[ ] Java
-[ ] C
-[ ] C++
-[ ] Go
+
+- [ ] Python (in-progress)
+- [ ] JS
+- [ ] Java
+- [ ] C
+- [ ] C++
+- [ ] Go
 ...
