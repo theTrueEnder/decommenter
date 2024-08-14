@@ -7,14 +7,15 @@ parser.add_argument(
     "--mode", 
     "-m",
     action="store", 
-    choices=["decomment", "recomment"]
+    choices=["decomment", "recomment"],
+    help="select mode of operation (decomment or recomment)"
 )
 
 parser.add_argument(
     "--file", 
     "-f",
     action="store", 
-    help="Filename or path to the target file",
+    help="filename or path to the target file",
     nargs="?"
 )
 

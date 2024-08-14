@@ -62,10 +62,3 @@ def rc_python(fname):
         f.writelines(lines)
 
     print(f'{fname} recommented.')
-    
-# https://peps.python.org/pep-0008/#block-comments
-
-
-
-
-
