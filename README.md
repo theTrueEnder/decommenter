@@ -5,8 +5,11 @@ Additionally, `decommenter` supports recommenting the decommented code by export
 
 ## Usage
 
+**Requires Python 3.10+ to be installed**
+> 3.10+ specifically due to match-case statements being used in the code
+
 ```c
-cli.py [-h] [--mode {decomment,recomment}] [--file [FILE]]
+python cli.py [-h] [--mode {decomment,recomment}] [--file [FILE]]
 
 options:
   -h, --help            show this help message and exit
