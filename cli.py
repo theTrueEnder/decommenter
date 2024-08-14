@@ -1,4 +1,4 @@
-from decomment import *
+from decomment import Decommenter
 import argparse
 parser = argparse.ArgumentParser()
 
@@ -20,20 +20,18 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-
 fname = args.file
-# args.mode = 'decomment'
-# fname = 'code.py'
 
 if __name__ == '__main__':
     ext = fname[fname.find('.')+1:]
     match(ext):
         case 'py':
+            dc = Decommenter(fname, 'python')
             if args.mode == 'decomment':
                 print(f'Decommenting {fname}...')
-                dc_python(fname)
+                dc.decomment()
             elif args.mode == 'recomment':
                 print(f'Recommenting {fname}...')
-                rc_python(fname)
+                dc.recomment()
         case _:
             print(f'Filetype "{ext}" not supported.')
