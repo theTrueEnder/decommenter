@@ -45,22 +45,22 @@ cstyle_langs = {
 
 pythonstyle_langs = {
     ".py",  # Python
-    # ".rb",  # Ruby
-    # ".pl", ".pm",  # Perl
-    # ".r",   # R
-    # ".sh", ".bash",  # Shell
-    # ".ps1", ".psm1", ".psd1",  # PowerShell
-    # # "Makefile", "Makefile"  # Makefile
-    # # ".dockerfile", "Dockerfile"  # Dockerfile
-    # ".yaml", ".yml",  # YAML
-    # ".tcl",  # Tcl
-    # ".jl",  # Julia
-    # ".awk",  # Awk
-    # ".m",   # MATLAB
-    # ".coffee",  # CoffeeScript
-    # ".ex", ".exs",  # Elixir
-    # ".vim",  # Vim Script
-    # ".hs",  # Haskell
+    ".rb",  # Ruby
+    ".pl", ".pm",  # Perl
+    ".r",   # R
+    ".sh", ".bash",  # Shell
+    ".ps1", ".psm1", ".psd1",  # PowerShell
+    # "Makefile", "Makefile"  # Makefile
+    # ".dockerfile", "Dockerfile"  # Dockerfile
+    ".yaml", ".yml",  # YAML
+    ".tcl",  # Tcl
+    ".jl",  # Julia
+    ".awk",  # Awk
+    ".m",   # MATLAB
+    ".coffee",  # CoffeeScript
+    ".ex", ".exs",  # Elixir
+    ".vim",  # Vim Script
+    ".hs",  # Haskell
 }
 
 if __name__ == '__main__':
@@ -75,6 +75,7 @@ if __name__ == '__main__':
             dc.recomment()
             
     elif ext in cstyle_langs:
+        print('WARNING: C-style block comments result in unexpected behaviors and may not format correctly. A fix will be coming in the near future.')
         dc = Decommenter(fname, 'cstyle')
         if args.mode == 'decomment':
             print(f'Decommenting {fname}...')
