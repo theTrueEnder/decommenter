@@ -167,10 +167,22 @@ class Decommenter():
             # if inline, append to code line
             # otherwise, insert new line with comment (matches indentation of following line) 
             if inline:
-                lines[linenum-1] = lines[linenum-1][:-1] + f'  {self.symbol} {comment}\n'
+                # print(f'Inline comment:\n\tLine {linenum}:', lines[linenum])
+                # print(f'\tCmnt:', comment)
+                # print('\tPrev:', lines[linenum-1])
+                try:
+                    lines[linenum-1] = lines[linenum-1][:-1] + f'  {self.symbol} {comment}\n'
+                except IndexError:
+                    lines.insert(linenum-1, '\n')
+                    lines[linenum-1] = lines[linenum-1][:-1] + f'  {self.symbol} {comment}\n'
             else:
-                ws = re.match(r"\s*", lines[linenum-1]).group(1)
-                lines.insert(linenum - 1, f'{ws}# {comment}\n')
+                try:
+                    ws = re.match(r"\s*", lines[linenum-1]).group()
+                except IndexError:
+                    lines.insert(linenum-1, '\n')
+                    ws = re.match(r"\s*", lines[linenum-1]).group()
+                    
+                lines.insert(linenum - 1, f'{ws}{self.symbol} {comment}\n')
         
         # write changes over original code
         self._write_code(lines)
