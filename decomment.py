@@ -7,18 +7,16 @@ class Decommenter():
         self.fname = fname
         self.symbol = None
         self.block_symbol = None
-        match(mode):
-            case 'python':
-                self.symbol = '#'
-                self.block_symbol = None
-            
-            case 'cstyle':
-                self.symbol = '//'
-                self.block_symbol = ('/*', '*/')
+        if mode == 'python':
+            self.symbol = '#'
+            self.block_symbol = None
+        elif mode == 'cstyle':
+            self.symbol = '//'
+            self.block_symbol = ('/*', '*/')
                 
-            case _:
-                print('Unrecognized decomment mode')
-                return
+        else:
+            print('Unrecognized decomment mode')
+            return
         
     def _get_code(self):
         with open(self.fname, mode='r') as f:
