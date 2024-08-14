@@ -1,7 +1,11 @@
 import re
 import json
 
-
+COMMENT_TYPES = {
+    BLOCK := 'BLOCK',
+    INLINE := 'INLINE',
+    DOC := 'DOC',
+}
 class Decommenter():
     def __init__(self, fname, mode):
         self.fname = fname
@@ -12,6 +16,7 @@ class Decommenter():
             self.block_symbol = None
         elif mode == 'cstyle':
             self.symbol = '//'
+            self.docsymbol = '///'
             self.block_symbol = ('/*', '*/')
                 
         else:
@@ -39,34 +44,56 @@ class Decommenter():
         # get original file
         code = self._get_code()
         
-        dc_code, comments = [], []
+        comments = []
         # block_comment = False
         
-        start_sym = re.escape(self.block_symbol[0])
-        end_sym = re.escape(self.block_symbol[1])
+        start_sym = self.block_symbol[0]
+        end_sym = self.block_symbol[1]
         sym = re.escape(self.symbol)
+        # print('Sym:', sym)
         
-        r_block = re.compile(r'(\s)*' + start_sym + r'(.|\n)*' + end_sym)
-        r_newline = re.compile(r'$(\s)*' + sym + r'(.*)$')
-        r_inline = re.compile(r'(?<!\\)' + sym + r'(.*)$')
+        rx = r'(?<!["\'])\s*(?<!\\)' + sym + r'(.*)$'
+
+        r_block = re.compile(r'\s*' + re.escape(start_sym) + r'.*?' + re.escape(end_sym), re.MULTILINE | re.DOTALL)
+        # r_newline = re.compile(r'$(\s)*' + sym + r'(.*)$')
+        r_inline = re.compile(rx, re.MULTILINE)
+                
+        
+        inline_cmts = re.finditer(r_inline, code) # not getting everything it should
+        dc_code = re.sub(r_inline, '', code, 0)
+        
+        block_cmts = re.finditer(r_block, dc_code)
+        dc_code = re.sub(r_block, '', dc_code, 0)
+        
+        # newline_cmts = re.findall(r_newline, code)
+        # re.sub(r_newline, '', code, 0)
         
         
-        block_cmts = re.findall(r_block, code, re.MULTILINE)
-        re.sub(r_block, '', code, 0, re.MULTILINE)
+        # print(dc_code)
+        ###
+        # just use inlines and blocks and then use the spans to replace it instead of linenums
+        # this would mean managing whitespace and newlines correctly but dang
+        ###
         
-        newline_cmts = re.findall(r_newline, code)
-        re.sub(r_newline, '', code, 0)
-        
-        inline_cmts = re.findall(r_inline, code)
-        re.sub(r_inline, '', code, 0)
-        
-        
-        # for linenum, line in enumerate(lines, start=1):
-            # Handle block comment start
-            # res = re.search(r'(?<!\\)' + re.escape(start_sym) + r'(.*)', line)
-            # res = re.search(r'(?<!\\)' + re.escape(start_sym) + r'(.*)', line)
+        for match in block_cmts:
+            # add to comments with span
+            print('Match:\n\t', match)
+            comments.append({
+                "span":  match.span(),
+                "type":  BLOCK,
+                "comment": match.group() # .strip()
+            })
             
+        for match in inline_cmts:
+            # add to comments with span
+            # print('Match:\n\t', match)
+            comments.append({
+                "span":  match.span(),
+                "type":  INLINE,
+                "comment": match.group() # .strip()
+            })
             
+        
         
         
         self._write_code(dc_code)
