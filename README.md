@@ -23,8 +23,8 @@ options:
 
 - [X] Python-style comments*
 - [X] C-style comments: UNSTABLE (see below)
-{::comment}
-- [X] Python
+
+<!-- - [X] Python
 - [ ] JS
 - [ ] Java
 - [ ] C
@@ -32,7 +32,7 @@ options:
 - [ ] Go
 - [ ] Custom
 - ...
-{:/comment}
+-->
 
 ### Python-Style Comments
 
