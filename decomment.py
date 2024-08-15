@@ -3,7 +3,7 @@ import json
 
 COMMENT_TYPES = {
     BLOCK := 'BLOCK',
-    INLINE := 'INLINE',
+    LINE := 'LINE',
     DOC := 'DOC',
 }
 class Decommenter():
@@ -40,66 +40,64 @@ class Decommenter():
         with open(self.fname + '.dc.json', mode='w') as f:
             json.dump(comments, f)
 
-    def decomment(self):
+    def decomment(self) -> dict:
         # get original file
         code = self._get_code()
+        code_len = len(code)
         
         comments = []
-        # block_comment = False
-        
-        start_sym = self.block_symbol[0]
-        end_sym = self.block_symbol[1]
-        sym = re.escape(self.symbol)
-        # print('Sym:', sym)
-        
-        rx = r'(?<!["\'])\s*(?<!\\)' + sym + r'(.*)$'
+        start_sym, end_sym = self.block_symbol
 
+        # define regex patterns for line and block quotes
+        r_line = re.compile(r'(?<!["\'])\s*(?<!\\)' + re.escape(self.symbol) + r'(.*)$', re.MULTILINE)
         r_block = re.compile(r'\s*' + re.escape(start_sym) + r'.*?' + re.escape(end_sym), re.MULTILINE | re.DOTALL)
-        # r_newline = re.compile(r'$(\s)*' + sym + r'(.*)$')
-        r_inline = re.compile(rx, re.MULTILINE)
                 
-        
-        inline_cmts = re.finditer(r_inline, code) # not getting everything it should
-        dc_code = re.sub(r_inline, '', code, 0)
+        # get an iterator for all matches of the pattern (line/block comments)
+        # then erase them from the code
+        line_cmts = re.finditer(r_line, code)
+        dc_code = re.sub(r_line, '', code, 0)
         
         block_cmts = re.finditer(r_block, dc_code)
         dc_code = re.sub(r_block, '', dc_code, 0)
         
-        # newline_cmts = re.findall(r_newline, code)
-        # re.sub(r_newline, '', code, 0)
+        stats = {
+            "orig_len": code_len,
+            LINE: {
+                "count": 0,
+                "total_len": 0
+            },
+            BLOCK: {
+                "count": 0,
+                "total_len": 0
+            }
+        }
         
+        # add line comments to list
+        for match in line_cmts:
+            comments.append({
+                "span":  match.span(),
+                "type":  LINE,
+                "comment": match.group() # .strip()
+            })
+            stats[LINE]['count'] += 1
+            stats[LINE]['total_len'] += len(match.group())
         
-        # print(dc_code)
-        ###
-        # just use inlines and blocks and then use the spans to replace it instead of linenums
-        # this would mean managing whitespace and newlines correctly but dang
-        ###
-        
+        # add block comments to list
         for match in block_cmts:
-            # add to comments with span
             print('Match:\n\t', match)
             comments.append({
                 "span":  match.span(),
                 "type":  BLOCK,
                 "comment": match.group() # .strip()
             })
+            stats[BLOCK]['count'] += 1
+            stats[BLOCK]['total_len'] += len(match.group())
             
-        for match in inline_cmts:
-            # add to comments with span
-            # print('Match:\n\t', match)
-            comments.append({
-                "span":  match.span(),
-                "type":  INLINE,
-                "comment": match.group() # .strip()
-            })
-            
-        
-        
-        
+        # write results to files and exit
         self._write_code(dc_code)
         self._write_comments(comments)
-            
         print(f'{self.fname} decommented.')
+        return stats
         
         
         
