@@ -3,7 +3,8 @@ import json
 
 COMMENT_TYPES = {
     BLOCK := 'BLOCK',
-    LINE := 'LINE',
+    INLINE := 'INLINE',
+    NEWLINE := 'NEWLINE',
     DOC := 'DOC',
 }
 class Decommenter():
@@ -48,53 +49,52 @@ class Decommenter():
         comments = []
         start_sym, end_sym = self.block_symbol
 
-        # define regex patterns for line and block quotes
-        r_line = re.compile(r'(?<!["\'])\s*(?<!\\)' + re.escape(self.symbol) + r'(.*)$', re.MULTILINE)
-        r_block = re.compile(r'\s*' + re.escape(start_sym) + r'.*?' + re.escape(end_sym), re.MULTILINE | re.DOTALL)
+        # define regex patterns for inline, newline, and block quotes
+        # r_inline = re.compile( r'(?<=\w)(?<!["\'])[ \t]*(?<!\\)' + re.escape(self.symbol) + r'(.*)?(\Z)?', re.MULTILINE | re.DOTALL)
+        r_inline = re.compile( r'(^.*?(\S))(?<!["\'])[ \t]*(?<!\\)' + re.escape(self.symbol) + r'(.*)?$', re.MULTILINE)
+        r_newline = re.compile(r'(?<!["\'])[ \t]*(?<!\\)' + re.escape(self.symbol) + r'.*?\n', re.MULTILINE | re.DOTALL)
+        r_block = re.compile(  r'(?<!["\'])[ \t]*' + re.escape(start_sym) + r'.*?' + re.escape(end_sym) + r'\n?', re.MULTILINE | re.DOTALL)
                 
         # get an iterator for all matches of the pattern (line/block comments)
         # then erase them from the code
-        line_cmts = re.finditer(r_line, code)
-        dc_code = re.sub(r_line, '', code, 0)
         
-        block_cmts = re.finditer(r_block, dc_code)
-        dc_code = re.sub(r_block, '', dc_code, 0)
+        inline_cmts = re.finditer(r_inline, code)
+        code = re.sub(r_inline, '', code, 0) # TODO: it's subbing the whole inline match for '', but it should only be doing it for the code part of the match
+        
+        newline_cmts = re.finditer(r_newline, code)
+        code = re.sub(r_newline, '', code, 0)
+        
+        block_cmts = re.finditer(r_block, code)
+        code = re.sub(r_block, '', code, 0)
         
         stats = {
             "orig_len": code_len,
-            LINE: {
-                "count": 0,
-                "total_len": 0
-            },
-            BLOCK: {
-                "count": 0,
-                "total_len": 0
-            }
         }
+        [stats.update({t: {"count": 0, "total_len": 0}}) for t in COMMENT_TYPES]
         
-        # add line comments to list
-        for match in line_cmts:
+        cmt_and_type = [(NEWLINE, cmt.group(), cmt.span()) for cmt in newline_cmts] + \
+                       [(BLOCK,   cmt.group(), cmt.span()) for cmt in block_cmts]
+        # cmt_and_type = []
+        for cmt in inline_cmts:
+            inline_code, _, inline_cmt = cmt.groups()
+            inline_cmt = self.symbol + inline_cmt
+            # print(cmt.groups())
+            cmt_and_type.append((INLINE, inline_cmt, [cmt.span()[0] + len(inline_code), cmt.span()[1]]))
+        # + \
+                    #    [(NEWLINE, cmt) for cmt in newline_cmts] + \
+                    #    [(BLOCK, cmt) for cmt in block_cmts]
+                       
+        for cmt_type, cmt, span in cmt_and_type:
             comments.append({
-                "span":  match.span(),
-                "type":  LINE,
-                "comment": match.group() # .strip()
+                "type":  cmt_type,
+                "comment": cmt,
+                "span":  span
             })
-            stats[LINE]['count'] += 1
-            stats[LINE]['total_len'] += len(match.group())
-        
-        # add block comments to list
-        for match in block_cmts:
-            print('Match:\n\t', match)
-            comments.append({
-                "span":  match.span(),
-                "type":  BLOCK,
-                "comment": match.group() # .strip()
-            })
-            stats[BLOCK]['count'] += 1
-            stats[BLOCK]['total_len'] += len(match.group())
+            stats[cmt_type]['count'] += 1
+            stats[cmt_type]['total_len'] += len(cmt)
             
         # write results to files and exit
-        self._write_code(dc_code)
+        self._write_code(code)
         self._write_comments(comments)
         print(f'{self.fname} decommented.')
         return stats
@@ -104,37 +104,26 @@ class Decommenter():
     # recomment python code
     def recomment(self):
         # load comments file
-        comments = self._get_comments()
+        raw_comments = self._get_comments()
+        raw_block_comments = [[cmt['span'][0], cmt['type'], cmt['comment']] for cmt in raw_comments if cmt['type'] == BLOCK]
+        raw_newline_comments = [[cmt['span'][0], cmt['type'], cmt['comment']] for cmt in raw_comments if cmt['type'] == NEWLINE]
+        raw_inline_comments = [[cmt['span'][0], cmt['type'], cmt['comment']] for cmt in raw_comments if cmt['type'] == INLINE]
+        
+        comments = sorted(raw_block_comments,   key=lambda x: x[0], reverse=True) + \
+                   sorted(raw_newline_comments, key=lambda x: x[0], reverse=True) + \
+                   sorted(raw_inline_comments,  key=lambda x: x[0], reverse=True)
         
         # load decommented code file
-        lines = self._get_code()
-            
-        for comment in comments:
-            inline, linenum, comment = tuple(comment.values())
-            
-            # TODO: add support for block comments
-            
-            # if inline, append to code line
-            # otherwise, insert new line with comment (matches indentation of following line) 
-            if inline:
-                # print(f'Inline comment:\n\tLine {linenum}:', lines[linenum])
-                # print(f'\tCmnt:', comment)
-                # print('\tPrev:', lines[linenum-1])
-                try:
-                    lines[linenum-1] = lines[linenum-1][:-1] + f'  {self.symbol} {comment}\n'
-                except IndexError:
-                    lines.insert(linenum-1, '\n')
-                    lines[linenum-1] = lines[linenum-1][:-1] + f'  {self.symbol} {comment}\n'
-            else:
-                try:
-                    ws = re.match(r"\s*", lines[linenum-1]).group()
-                except IndexError:
-                    lines.insert(linenum-1, '\n')
-                    ws = re.match(r"\s*", lines[linenum-1]).group()
-                    
-                lines.insert(linenum - 1, f'{ws}{self.symbol} {comment}\n')
+        code = self._get_code()
+        [print(c) for c in comments]
+        for left, cmt_type, comment in comments:
+            # insert comment string into code using span info
+            code = code[:left] + comment + code[left:]
+            # print('Pre:\n\t', code[:span[0]])
+            # print('Comment:\n\t', comment)
+            # print('Post:\n\t', code[span[1]:])
         
         # write changes over original code
-        self._write_code(lines)
+        self._write_code(code)
 
         print(f'{self.fname} recommented.')
